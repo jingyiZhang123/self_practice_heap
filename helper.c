@@ -6,96 +6,35 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-
-extern int* GenerateRandomArray(int start,int end,long long size);
-extern void TestSorting(sortfunc_p func,char* func_name,int* arr,long long size);
-extern int* GenerateNearlyOrderedArray(long long size, int num_swap);
-extern void swap(int* arr, int index1, int index2);
-
-extern void MaxHeap_Init(maxheap_p maxheap, int capacity);
-extern bool MaxHeap_Insert(maxheap_p maxheap, int value);
-extern int MaxHeap_Pop(maxheap_p maxheap);
-extern void MaxHeap_Del(maxheap_p maxheap);
-extern bool MaxHeap_IsEmpty(maxheap_p maxheap);
-extern int MaxHeap_Size(maxheap_p maxheap);
-extern void MaxHeap_ArrInit(maxheap_p maxheap, int* arr, int n);
+#include <stdarg.h>
 
 
-static bool IsSorted(int* arr,int size);
-static void _shiftup(maxheap_p maxheap, int k);
-static void _shiftdown(maxheap_p maxheap, int k);
+extern void swap(void* elem1, void* elem2, int elem_size);
+extern int* GenerateRandomArray(int start, int end, long long size);
+extern int* GenerateNearlyOrderedArray(int size, int num_swap);
+extern void TestSorting(sortfunc_p func, char* func_name, void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc);
+
+extern maxheap_p MaxHeap_Init(const int capacity, const int elem_size, freefunc_p freefunc, cmpfunc_p cmpfunc);
+extern bool MaxHeap_IsEmpty(maxheap_p mh);
+extern void MaxHeap_Del(maxheap_p mh);
+extern void MaxHeap_Append(maxheap_p mh, void* elem);
+extern void MaxHeap_Pop(maxheap_p mh, void* poped_elem);
+
+static bool IsSorted(void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc);
+static void _shiftup(maxheap_p maxheap, int index);
+static void _shiftdown(maxheap_p mh, int index);
 
 /*
  * Public functions
  */
 
-inline void swap(int* arr, int index1, int index2){
-  int temp = arr[index1];
-  arr[index1] = arr[index2];
-  arr[index2] = temp;
-
-  return;
+inline void swap(void* elem1, void* elem2, int elem_size){
+  void* temp = malloc(elem_size);
+  memcpy(temp, elem1, elem_size);
+  memcpy(elem1, elem2, elem_size);
+  memcpy(elem2, temp, elem_size);
+  free(temp);
 }
-
-
-void MaxHeap_Init(maxheap_p maxheap, int capacity){
-    assert(capacity > 0);
-
-    maxheap->elems = malloc(sizeof(int) * (capacity + 1));
-    memset(maxheap->elems, sizeof(int)*(capacity+1), 0);
-    assert(maxheap->elems != NULL);
-
-    maxheap->num_elems = 0;
-    maxheap->capacity = capacity;
-}
-
-void MaxHeap_ArrInit(maxheap_p maxheap, int* arr, int n){
-  maxheap->elems = malloc(sizeof(int) * (n + 1));
-  maxheap->capacity = n;
-  for (int i = 0; i < n; i++)
-    maxheap->elems[i+1] = arr[i];
-
-  maxheap->num_elems = n;
-  for (int i = maxheap->num_elems/2; i >= 1; i--) {
-    _shiftdown(maxheap, i);
-  }
-
-}
-
-bool MaxHeap_Insert(maxheap_p maxheap, int value){
-    if(maxheap->num_elems+1 <= maxheap->capacity){
-        maxheap->elems[++(maxheap->num_elems)] = value;
-        _shiftup(maxheap, maxheap->num_elems);
-        return true;
-    }
-    return false;
-}
-
-int MaxHeap_Pop(maxheap_p maxheap){
-    if(maxheap->num_elems <= 0)
-        return -1;
-    int ret = maxheap->elems[1];
-    swap(maxheap->elems, 1, maxheap->num_elems--);
-    _shiftdown(maxheap, 1);
-    return ret;
-
-}
-
-void MaxHeap_Del(maxheap_p maxheap){
-    assert(maxheap != NULL);
-    free(maxheap->elems);
-}
-
-bool MaxHeap_IsEmpty(maxheap_p maxheap){
-    assert(maxheap != NULL);
-    return maxheap->num_elems == 0;
-}
-
-int MaxHeap_Size(maxheap_p maxheap){
-    assert(maxheap != NULL);
-    return maxheap->num_elems;
-}
-
 
 
 int* GenerateRandomArray(int start, int end, long long size){
@@ -103,75 +42,130 @@ int* GenerateRandomArray(int start, int end, long long size){
   int* arr = malloc(sizeof(int) * size);
   assert(arr != NULL);
   int range = end - start;
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++)
     arr[i] = rand()%range + start;
-  }
 
   return arr;
 }
 
 
-int* GenerateNearlyOrderedArray(long long size, int num_swap){
+int* GenerateNearlyOrderedArray(int size, int num_swap){
   srand(time(NULL));
   int* arr = malloc(sizeof(int) * size);
-  for (long long i = 0; i < size; i++)
+  for (int i = 0; i < size; i++)
     arr[i] = i;
-  for (long long i = 0; i < num_swap; i++) {
-    long long index1 = rand()%size;
-    long long index2 = rand()%size;
-    swap(arr, index1, index2);
+  for (int i = 0; i < num_swap; i++) {
+    int index1 = rand()%size;
+    int index2 = rand()%size;
+    swap(&arr[index1], &arr[index2], sizeof(int));
   }
   return arr;
 }
 
-
-void TestSorting(sortfunc_p func,char* func_name,int* arr, long long size){
+void TestSorting(sortfunc_p func, char* func_name, void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc){
   clock_t t1, t2;
 
   t1 = clock();
-  func(arr, size);
-  assert(IsSorted(arr,size));
-  /* for (int i = 0 ; i < size; i++) { */
-  /*   printf("%d ", arr[i]); */
-  /* } */
-  /* printf("\n"); */
+  func(arr, elem_num, elem_size, cmpfunc);
+  assert(IsSorted(arr, elem_num, elem_size, cmpfunc));
   t2 = clock();
 
   float diff = ((float)(t2 - t1) / 1000000.0F );
-  /* printf("%f",diff); */
 
-  printf("%s: %f seconds. Size: %lld\n", func_name, diff, size);
+  printf("%s: %f seconds. Size: %d\n", func_name, diff, elem_num);
+}
+
+maxheap_p MaxHeap_Init(const int capacity, const int elem_size, freefunc_p freefunc, cmpfunc_p cmpfunc){
+  assert(capacity > 0 && elem_size > 0 && cmpfunc != NULL);
+  maxheap_p mh = malloc(sizeof(maxheap_t));
+  assert(mh != NULL);
+  memset(mh, sizeof(maxheap_t), 0);
+
+  mh->cmpfunc = cmpfunc;
+  mh->elem_size = elem_size;
+  mh->elem_num = 0;
+  mh->capacity = capacity;
+  mh->elems = malloc(elem_size * (capacity+1));
+  assert(mh->elems != NULL);
+  memset(mh->elems, elem_size * (capacity+1), 0);
+  mh->freefunc = freefunc;
+
+  return mh;
+}
+
+void MaxHeap_Append(maxheap_p mh, void* elem){
+  assert(mh->elem_num < mh->capacity);
+  memcpy((char*)(mh->elems) + (mh->elem_num+1) * mh->elem_size, elem, mh->elem_size);
+  mh->elem_num++;
+  _shiftup(mh, mh->elem_num);
+}
+
+void MaxHeap_Pop(maxheap_p mh, void* poped_elem){
+  assert(poped_elem != NULL && mh->elem_num > 0);
+
+  memcpy(poped_elem, (char*)mh->elems + 1*mh->elem_size, mh->elem_size);
+
+  swap((char*)mh->elems + 1 * mh->elem_size,        \
+       (char*)mh->elems + mh->elem_num-- * mh->elem_size,    \
+       mh->elem_size);
+  _shiftdown(mh, 1);
+
+}
+
+
+bool MaxHeap_IsEmpty(maxheap_p mh){
+  return mh->elem_num == 0;
+}
+
+void MaxHeap_Del(maxheap_p mh){
+
+  if(mh->freefunc == NULL)
+    free(mh->elems);
+  else
+    mh->freefunc(mh->elems);
+  free(mh);
+  return;
 }
 
 /*
  * Private functions
  */
 
-bool IsSorted(int* arr, int size){
-  for (int i = 1; i < size; i++) {
-    if (arr[i] < arr[i-1]) {
+
+bool IsSorted(void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc){
+  void* cur_elem = NULL;
+  void* prev_elem = NULL;
+  for (int i = 1; i < elem_num; i++) {
+    cur_elem = (char*)arr + i*elem_size;
+    prev_elem = (char*)arr + (i-1)*elem_size;
+    if (cmpfunc(cur_elem, prev_elem) < 0)
       return false;
-    }
   }
   return true;
 }
 
-
-void _shiftup(maxheap_p maxheap, int k){
-  while(maxheap->elems[k/2] < maxheap->elems[k]){
-    swap(maxheap->elems, k/2, k);
-    k /= 2;
+void _shiftup(maxheap_p maxheap, int index){
+  while(maxheap->cmpfunc((char*)maxheap->elems + index*maxheap->elem_size,(char*)maxheap->elems + (index/2)*maxheap->elem_size) < 0){
+    swap((char*)maxheap->elems + index*maxheap->elem_size,\
+         (char*)maxheap->elems + (index/2)*maxheap->elem_size,\
+         maxheap->elem_size);
+    index /= 2;
   }
 }
 
-void _shiftdown(maxheap_p maxheap, int k){
-  while(2*k <= maxheap->num_elems){
-    int j = 2*k;
-    if(j + 1 <= maxheap->num_elems && maxheap->elems[j+1] > maxheap->elems[j])
-      j += 1;
-    if(maxheap->elems[k] >= maxheap->elems[j])
+void _shiftdown(maxheap_p mh, int index){
+  while(index * 2 <= mh->elem_num){
+    int smaller_child = index * 2;
+    if((index*2+1 <= mh->elem_num) && \
+       (mh->cmpfunc((char*)mh->elems + index*2*mh->elem_size, (char*)mh->elems + (index*2+1)*mh->elem_size) > 0))
+      smaller_child += 1;
+    if(mh->cmpfunc((char*)mh->elems + index*mh->elem_size, (char*)mh->elems + smaller_child*mh->elem_size) > 0){
+      swap((char*)mh->elems + index*mh->elem_size,\
+           (char*)mh->elems + smaller_child*mh->elem_size,\
+           mh->elem_size);
+      index = smaller_child;
+    }
+    else
       break;
-    swap(maxheap->elems, k, j);
-    k = j;
   }
 }

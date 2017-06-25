@@ -15,6 +15,7 @@ extern int* GenerateNearlyOrderedArray(int size, int num_swap);
 extern void TestSorting(sortfunc_p func, char* func_name, void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc);
 
 extern maxheap_p MaxHeap_Init(const int capacity, const int elem_size, freefunc_p freefunc, cmpfunc_p cmpfunc);
+extern maxheap_p MaxHeap_InitWithArr(void* arr, const int capacity, const int elem_size, freefunc_p freefunc, cmpfunc_p cmpfunc);
 extern bool MaxHeap_IsEmpty(maxheap_p mh);
 extern void MaxHeap_Del(maxheap_p mh);
 extern void MaxHeap_Append(maxheap_p mh, void* elem);
@@ -92,6 +93,30 @@ maxheap_p MaxHeap_Init(const int capacity, const int elem_size, freefunc_p freef
 
   return mh;
 }
+
+maxheap_p MaxHeap_InitWithArr(void* arr, const int capacity, const int elem_size, freefunc_p freefunc, cmpfunc_p cmpfunc){
+  assert(capacity > 0 && elem_size > 0 && cmpfunc != NULL);
+  maxheap_p mh = malloc(sizeof(maxheap_t));
+  assert(mh != NULL);
+  memset(mh, sizeof(maxheap_t), 0);
+
+  mh->cmpfunc = cmpfunc;
+  mh->elem_size = elem_size;
+  mh->elem_num = capacity;
+  mh->capacity = capacity;
+  mh->elems = malloc(elem_size * (capacity+1));
+  assert(mh->elems != NULL);
+  memset(mh->elems, elem_size * (capacity+1), 0);
+  mh->freefunc = freefunc;
+  for (int i=0; i<capacity; i++)
+    memcpy((char*)mh->elems + (i+1)*elem_size,\
+           (char*)arr + i*elem_size,\
+           elem_size);
+  for (int i=capacity; i>0; i--)
+    _shiftdown(mh, i);
+  return mh;
+}
+
 
 void MaxHeap_Append(maxheap_p mh, void* elem){
   assert(mh->elem_num < mh->capacity);

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include "helper.h"
 
-#define ARR_SIZE 1000000
+#define ARR_SIZE 2000000
 
 void HeapSort1(void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc){
     maxheap_p maxheap = MaxHeap_Init(elem_num, elem_size, NULL, cmpfunc);
@@ -68,6 +68,16 @@ void HeapSort3(void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc){
     }
 }
 
+void HeapSort4(void* arr, int elem_num, int elem_size, cmpfunc_p cmpfunc){
+    index_maxheap_p maxheap = IndexMaxHeap_InitWithArr(arr, elem_num, elem_size, NULL, cmpfunc);
+    void* aux = malloc(elem_size);
+    for (int i = 0; i < elem_num; i++) {
+        IndexMaxHeap_Pop(maxheap, aux);
+        memcpy((char*)arr + i*elem_size, aux, elem_size);
+    }
+    IndexMaxHeap_Del(maxheap);
+    free(aux);
+}
 
 int Int_Compare(void* a, void* b){
     return *(int*)a - *(int*)b;
@@ -77,14 +87,14 @@ int Int_Compare(void* a, void* b){
 /* int main(int argc, char *argv[]) */
 /* { */
 /*     int arr[12]; */
-/*     for (int i=0; i<12; i++) */
+/*    for (int i=0; i<12; i++) */
 /*         arr[i] = rand()%10; */
 
 /*     for (int i=0; i<12; i++) { */
 /*         printf("%d ", arr[i]); */
 /*     } */
 /*     printf("\n"); */
-/*     HeapSort3(arr, 12, sizeof(int), Int_Compare); */
+/*     HeapSort4(arr, 12, sizeof(int), Int_Compare); */
 /*     for (int i=0; i<12; i++) { */
 /*         printf("%d ", arr[i]); */
 /*     } */
@@ -98,11 +108,17 @@ int main(int argc, char *argv[])
     int* arr = GenerateNearlyOrderedArray(ARR_SIZE, 500);
     TestSorting(HeapSort1, "HeapSort1 (Nearly Sort)", arr, ARR_SIZE, sizeof(int), Int_Compare);
     free(arr);
+
     arr = GenerateNearlyOrderedArray(ARR_SIZE, 500);
     TestSorting(HeapSort2, "HeapSort2 (Nearly Sort)", arr, ARR_SIZE, sizeof(int), Int_Compare);
     free(arr);
+
     arr = GenerateNearlyOrderedArray(ARR_SIZE, 500);
     TestSorting(HeapSort3, "HeapSort3 (Nearly Sort)", arr, ARR_SIZE, sizeof(int), Int_Compare);
+    free(arr);
+
+    arr = GenerateNearlyOrderedArray(ARR_SIZE, 500);
+    TestSorting(HeapSort4, "HeapSort4 (Nearly Sort)", arr, ARR_SIZE, sizeof(int), Int_Compare);
     free(arr);
 
     printf("---------------------------\n");
@@ -116,6 +132,9 @@ int main(int argc, char *argv[])
     arr = GenerateRandomArray(0,ARR_SIZE, ARR_SIZE);
     TestSorting(HeapSort3, "HeapSort3 (Normal)     ", arr, ARR_SIZE, sizeof(int), Int_Compare);
     free(arr);
+    arr = GenerateRandomArray(0,ARR_SIZE, ARR_SIZE);
+    TestSorting(HeapSort4, "HeapSort4 (Normal)     ", arr, ARR_SIZE, sizeof(int), Int_Compare);
+    free(arr);
     printf("---------------------------\n");
 
     arr = GenerateRandomArray(0,256, ARR_SIZE);
@@ -126,6 +145,9 @@ int main(int argc, char *argv[])
     free(arr);
     arr = GenerateRandomArray(0,256, ARR_SIZE);
     TestSorting(HeapSort3, "HeapSort3 (Duplicates) ", arr, ARR_SIZE, sizeof(int), Int_Compare);
+    free(arr);
+    arr = GenerateRandomArray(0,256, ARR_SIZE);
+    TestSorting(HeapSort4, "HeapSort4 (Duplicates) ", arr, ARR_SIZE, sizeof(int), Int_Compare);
     free(arr);
     printf("---------------------------\n");
 

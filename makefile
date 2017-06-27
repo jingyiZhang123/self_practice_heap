@@ -2,11 +2,14 @@
 CC=c99
 CFLAGS=-c -Wall
 
-all: clean heap
-	./heap
+all: clean main
+	./main
 
-heap: heap.o helper.o
-	$(CC) -o heap heap.o helper.o
+main: heap.o helper.o indexheap.o maxheap.o main.o
+	$(CC) -o main heap.o helper.o main.o indexheap.o maxheap.o
+
+main.o:
+	$(CC) $(CFLAGS) main.c
 
 helper.o:
 	$(CC) $(CFLAGS) helper.c
@@ -14,5 +17,11 @@ helper.o:
 heap.o:
 	$(CC) $(CFLAGS) heap.c
 
+maxheap.o:
+	$(CC) $(CFLAGS) maxheap.c
+
+indexheap.o:
+	$(CC) $(CFLAGS) indexheap.c
+
 clean:
-	rm -rf *.o heap
+	rm -rf *.o main
